@@ -5,7 +5,7 @@ if(isset($_POST['register'])){
     // Escape strings for safety
     $name     = $conn->real_escape_string($_POST['name']);
     $email    = $conn->real_escape_string($_POST['email']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $password = $_POST['password'];
     $address  = $conn->real_escape_string($_POST['address']);
 
     // Insert user without card_number
