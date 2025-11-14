@@ -1,47 +1,51 @@
 <?php
-include 'db.php';
 session_start();
+include 'db.php';
 
-// Decryption function for Columnar Transposition Cipher
-function decryptTransposition($encryptedText, $key = 8) {
-    $length = strlen($encryptedText);
-    $rows = ceil($length / $key);
-    $cols = $key;
+// ===== Decryption function =====
+function decryptTransposition($ciphertext, $key=[4,5,2]){
+    $columns = count($key);
+    $rows = ceil(strlen($ciphertext)/$columns);
 
-    // Fill matrix column-wise
-    $matrix = array_fill(0, $rows, array_fill(0, $cols, ''));
+    $sortedKey = $key;
+    sort($sortedKey);
+    $columnOrder = [];
+    foreach($sortedKey as $val) $columnOrder[] = array_search($val, $key);
+
+    $colLengths = array_fill(0, $columns, $rows);
+
+    $matrix = array_fill(0, $rows, array_fill(0, $columns, ''));
     $k = 0;
-    for ($c = 0; $c < $cols; $c++) {
-        for ($r = 0; $r < $rows; $r++) {
-            if ($k < $length) {
-                $matrix[$r][$c] = $encryptedText[$k++];
-            }
+    for($ci=0; $ci<$columns; $ci++){
+        $c = $columnOrder[$ci];
+        for($r=0; $r<$colLengths[$c]; $r++){
+            $matrix[$r][$c] = $ciphertext[$k++];
         }
     }
 
-    // Read row-wise to get decrypted text
-    $decrypted = '';
-    for ($r = 0; $r < $rows; $r++) {
-        for ($c = 0; $c < $cols; $c++) {
-            $decrypted .= $matrix[$r][$c];
+    $plaintext = '';
+    for($r=0; $r<$rows; $r++){
+        for($c=0; $c<$columns; $c++){
+            if($matrix[$r][$c] !== '_') $plaintext .= $matrix[$r][$c]; // remove padding
         }
     }
 
-    return $decrypted;
+    return $plaintext;
 }
 
+
+// ===== Handle login =====
 if(isset($_POST['login'])){
     $email = $conn->real_escape_string($_POST['email']);
     $password = $_POST['password'];
 
-    // Fetch user from database
     $result = $conn->query("SELECT * FROM users WHERE email='$email'");
-    $user   = $result->fetch_assoc();
+    $user = $result->fetch_assoc();
 
     if($user){
-        // Decrypt stored password
         $decryptedPassword = decryptTransposition($user['password']);
-
+        echo "Decrypted password: " . $decryptedPassword; 
+        $decryptedPassword = decryptTransposition($user['password']);
         if($password === $decryptedPassword){
             $_SESSION['user_id'] = $user['id'];
             header("Location: index.php");
@@ -61,16 +65,13 @@ if(isset($_POST['login'])){
     <title>Login</title>
 </head>
 <body>
-<a href="register.php">
-    <button type="button">Registration</button>
-</a>
-<a href="index.php"><button type="button">Back to Shop</button></a> 
-
 <h2>Login</h2>
 <form method="POST">
     Email: <input type="email" name="email" required><br>
     Password: <input type="password" name="password" required><br>
     <button type="submit" name="login">Login</button>
 </form>
+<a href="register.php"><button type="button">Registration</button></a>
+<a href="index.php"><button type="button">Back to Shop</button></a>
 </body>
 </html>
